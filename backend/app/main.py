@@ -10,6 +10,7 @@ import socketio
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from execution.execution import run_code
 
 # Initialize FastAPI application
 app = FastAPI(title="Classroom Coding Platform")
@@ -63,6 +64,15 @@ async def disconnect(sid):
     """Handle disconnect event"""
     if handlers_available:
         await handle_disconnect(sid, sio, rooms)
+
+@sio.event
+async def run_code(sid, data):
+    code = data.get("code")
+    timeout = data.get("timeout", 30)
+
+    result = await run_code(code, timeout)
+
+    await sio.emit("code_result", result, to=sid)
 
 
 if handlers_available:
