@@ -30,47 +30,6 @@ def fibonacci(n):
 for i in range(10):
     print(f"fib({i}) = {fibonacci(i)}")
 `,
-    java: `// Welcome to Bootcamp IDE!
-// Write your Java code here
-
-public class Main {
-    public static int fibonacci(int n) {
-        if (n <= 1) return n;
-        return fibonacci(n - 1) + fibonacci(n - 2);
-    }
-
-    public static void main(String[] args) {
-        for (int i = 0; i < 10; i++) {
-            System.out.println("fib(" + i + ") = " + fibonacci(i));
-        }
-    }
-}
-`,
-    html: `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Hello World</title>
-</head>
-<body>
-  <h1>Hello, Bootcamp IDE!</h1>
-  <p>Start building something amazing.</p>
-</body>
-</html>
-`,
-    css: `/* Global Styles */
-body {
-  font-family: 'Inter', sans-serif;
-  background: #0f1419;
-  color: #ffffff;
-  margin: 0;
-  padding: 20px;
-}
-
-h1 {
-  color: #3b82f6;
-}
-`,
 };
 
 /** Mock student data with realistic names and statuses */
@@ -157,14 +116,9 @@ export const MOCK_STUDENTS = [
     },
 ];
 
-/** Supported programming languages */
 export const SUPPORTED_LANGUAGES = [
     { id: 'javascript', name: 'JavaScript', extension: '.js' },
     { id: 'python', name: 'Python', extension: '.py' },
-    { id: 'java', name: 'Java', extension: '.java' },
-    { id: 'html', name: 'HTML', extension: '.html' },
-    { id: 'css', name: 'CSS', extension: '.css' },
-    { id: 'typescript', name: 'TypeScript', extension: '.ts' },
 ];
 
 /** Default font sizes for the editor */

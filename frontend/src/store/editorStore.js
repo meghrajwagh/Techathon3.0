@@ -33,8 +33,7 @@ const useEditorStore = create(
             /** Change the programming language and load default template */
             setLanguage: (language) => {
                 const extensionMap = {
-                    javascript: '.js', python: '.py', java: '.java',
-                    html: '.html', css: '.css', typescript: '.ts',
+                    javascript: '.js', python: '.py',
                 };
                 const ext = extensionMap[language] || '.js';
                 const currentTabs = get().tabs.map((t) =>

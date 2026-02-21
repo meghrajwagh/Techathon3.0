@@ -1,6 +1,7 @@
 /**
  * Code Executor Service
- * Executes code by sending it to the backend Socket.IO server
+ * Executes code by sending it to the backend Socket.IO server.
+ * Supports interactive input/output streaming.
  */
 
 import socketService from './socketService';
@@ -9,59 +10,99 @@ import socketService from './socketService';
 const EXECUTION_TIMEOUT = 30000;
 
 /**
- * Execute code on the backend server via Socket.IO
+ * Execute code interactively on the backend server via Socket.IO.
+ * Output is streamed line-by-line via onOutput callback.
  *
  * @param {string} code - Source code to execute
- * @param {string} language - Programming language identifier (currently only Python supported)
- * @returns {Promise<{output: string, error: string|null}>}
+ * @param {string} language - Programming language identifier
+ * @param {Object} callbacks
+ * @param {Function} callbacks.onOutput - Called with each line of output (text, isError)
+ * @param {Function} callbacks.onDone - Called when execution finishes (result)
+ * @returns {Function} cleanup function to remove listeners
  */
-export async function executeCode(code, language) {
-    return new Promise((resolve) => {
-        const socket = socketService.socket;
+export function executeCodeInteractive(code, language, { onOutput, onDone }) {
+    const socket = socketService.socket;
 
-        if (!socket || !socket.connected) {
-            resolve({
+    if (!socket || !socket.connected) {
+        if (onDone) {
+            onDone({
                 output: '',
                 error: '❌ Not connected to server. Please check your connection.',
+                exit_code: 1
             });
-            return;
         }
+        return () => { };
+    }
 
-        // Set a timeout
-        const timeoutId = setTimeout(() => {
-            socket.off('code_result', handleResult);
-            resolve({
+    // Set a timeout
+    const timeoutId = setTimeout(() => {
+        cleanup();
+        if (onDone) {
+            onDone({
                 output: '',
                 error: '⏱ Execution timed out (30s limit)',
+                exit_code: 1
             });
-        }, EXECUTION_TIMEOUT);
+        }
+    }, EXECUTION_TIMEOUT);
 
-        // Listen for the result
-        const handleResult = (data) => {
-            clearTimeout(timeoutId);
-            socket.off('code_result', handleResult);
+    // Handle streaming output
+    const handleOutput = (data) => {
+        if (onOutput) {
+            onOutput(data.text, data.isError);
+        }
+    };
 
-            if (data.error) {
-                resolve({
-                    output: data.output || '',
-                    error: `❌ ${data.error}`,
-                });
-            } else {
-                resolve({
-                    output: data.output || '',
-                    error: data.exit_code !== 0 ? `Exit code: ${data.exit_code}` : null,
-                });
-            }
-        };
+    // Handle execution complete
+    const handleDone = (data) => {
+        clearTimeout(timeoutId);
+        cleanup();
+        if (onDone) {
+            onDone({
+                output: data.output || '',
+                error: data.error || null,
+                exit_code: data.exit_code || 0
+            });
+        }
+    };
 
-        socket.on('code_result', handleResult);
+    // Register listeners
+    socket.on('code_output', handleOutput);
+    socket.on('code_done', handleDone);
 
-        // Emit the code execution request
-        socket.emit('run_code', {
-            code,
-            language,
-            timeout: 10,
-        });
+    // Emit the code execution request
+    socket.emit('run_code', {
+        code,
+        language,
+        timeout: 30,
     });
+
+    // Cleanup function
+    const cleanup = () => {
+        socket.off('code_output', handleOutput);
+        socket.off('code_done', handleDone);
+    };
+
+    return cleanup;
 }
 
+/**
+ * Send input to a running interactive process.
+ * @param {string} text - Input text to send
+ */
+export function sendCodeInput(text) {
+    const socket = socketService.socket;
+    if (socket && socket.connected) {
+        socket.emit('code_input', { text });
+    }
+}
+
+/**
+ * Stop a running code execution.
+ */
+export function stopCodeExecution() {
+    const socket = socketService.socket;
+    if (socket && socket.connected) {
+        socket.emit('stop_code', {});
+    }
+}

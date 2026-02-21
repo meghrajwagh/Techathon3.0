@@ -6,11 +6,14 @@ student code in real-time within a single room using FastAPI and python-socketio
 """
 
 import os
+import time
+import asyncio
 import socketio
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.execution.execution import run_code as execute_code
+from app.execution.execution import start_interactive, send_input, stop_process
 
 # Initialize FastAPI application
 app = FastAPI(title="Classroom Coding Platform")
@@ -36,7 +39,7 @@ sio = socketio.AsyncServer(
 socket_app = socketio.ASGIApp(sio, app)
 
 # In-memory rooms dictionary for state storage
-# Structure: {roomId: {teacher: socketId, students: {socketId: {name, code, output}}, mainView: {type, studentId}}}
+# Structure: {roomId: {teacher: socketId, students: {...}, mainView: {...}, start_time: float}}
 rooms = {}
 
 # Store disconnected student data by (roomId, userName) for rejoin support
@@ -68,7 +71,26 @@ async def connect(sid, environ):
 
 @sio.event
 async def disconnect(sid):
-    """Handle disconnect event - save student data before removing"""
+    """Handle disconnect event - save student data, end room if teacher leaves"""
+    # Check if this sid is a teacher — if so, end the entire room
+    for room_id, room_data in list(rooms.items()):
+        if room_data.get('teacher') == sid:
+            print(f'[DISCONNECT] Teacher {sid} disconnected — ending room {room_id}')
+            # Notify all students that the session has ended
+            await sio.emit('room_closed', {
+                'message': 'The host has ended the session.'
+            }, room=room_id)
+            # Disconnect all students
+            for student_sid in list(room_data.get('students', {}).keys()):
+                try:
+                    await sio.disconnect(student_sid)
+                except Exception:
+                    pass
+            # Clean up room
+            del rooms[room_id]
+            print(f'[DISCONNECT] Room {room_id} deleted')
+            return
+
     # Save student data for potential rejoin
     for room_id, room_data in rooms.items():
         if sid in room_data.get('students', {}):
@@ -90,26 +112,74 @@ async def run_code(sid, data):
     timeout = data.get("timeout", 30)
     language = data.get("language", "python")
 
-    result = await execute_code(code, timeout, language)
+    # Collect all output and error for the final result
+    collected_output = []
+    collected_error = []
 
-    await sio.emit("code_result", result, to=sid)
+    async def on_output(text, is_error):
+        """Stream each line of output to the client in real-time."""
+        if is_error:
+            collected_error.append(text)
+        else:
+            collected_output.append(text)
+        # Send incremental output to the user
+        await sio.emit('code_output', {
+            'text': text,
+            'isError': is_error
+        }, to=sid)
 
-    # Also forward the output to the teacher if this student is in a room
-    for room_id, room_data in rooms.items():
-        if sid in room_data.get('students', {}):
-            # Store output in student data
-            room_data['students'][sid]['output'] = result.get('output', '')
-            room_data['students'][sid]['error'] = result.get('error', None)
-            # Forward to teacher
-            teacher_sid = room_data.get('teacher')
-            if teacher_sid:
-                await sio.emit('student_output', {
-                    'studentId': sid,
-                    'output': result.get('output', ''),
-                    'error': result.get('error', None)
-                }, to=teacher_sid)
-                print(f'[RUN_CODE] Forwarded output from student {sid} to teacher {teacher_sid}')
-            break
+    async def on_done(exit_code):
+        """Called when the process finishes."""
+        full_output = ''.join(collected_output)
+        full_error = ''.join(collected_error)
+        result = {
+            'exit_code': exit_code,
+            'output': full_output,
+            'error': full_error if exit_code != 0 else None
+        }
+        await sio.emit('code_done', result, to=sid)
+
+        # Forward to teacher if this is a student
+        for room_id, room_data in rooms.items():
+            if sid in room_data.get('students', {}):
+                room_data['students'][sid]['output'] = full_output
+                room_data['students'][sid]['error'] = full_error if exit_code != 0 else None
+                teacher_sid = room_data.get('teacher')
+                if teacher_sid:
+                    await sio.emit('student_output', {
+                        'studentId': sid,
+                        'output': full_output,
+                        'error': full_error if exit_code != 0 else None
+                    }, to=teacher_sid)
+                break
+
+    # Start interactive execution (streams output)
+    asyncio.create_task(
+        start_interactive(code, sid, timeout, language, on_output, on_done)
+    )
+
+
+@sio.event
+async def code_input(sid, data):
+    """Handle user input for interactive programs (e.g. input() in Python)."""
+    text = data.get('text', '')
+    success = await send_input(sid, text)
+    if success:
+        print(f'[CODE_INPUT] Sent input to process for {sid}: {repr(text)}')
+    else:
+        print(f'[CODE_INPUT] No running process for {sid}')
+
+
+@sio.event
+async def stop_code(sid, data=None):
+    """Stop a running code execution."""
+    await stop_process(sid)
+    await sio.emit('code_done', {
+        'exit_code': -1,
+        'output': '',
+        'error': '\n🛑 Execution stopped by user'
+    }, to=sid)
+    print(f'[STOP_CODE] Stopped execution for {sid}')
 
 
 if handlers_available:
@@ -134,6 +204,17 @@ if handlers_available:
                 'output': saved.get('output', ''),
             }, to=sid)
             print(f'[REJOIN] Restored data for student "{user_name}" in room {room_id}')
+
+        # Send timer sync to the newly joined student
+        room = rooms.get(room_id)
+        if room and room.get('timer_remaining') is not None:
+            elapsed_since_update = time.time() - room.get('timer_updated_at', time.time())
+            adjusted_time = max(0, int(room['timer_remaining'] - elapsed_since_update))
+            await sio.emit('timer_sync', {
+                'timeRemaining': adjusted_time,
+                'serverTime': time.time()
+            }, to=sid)
+            print(f'[TIMER] Sent timer sync to new student {sid}: {adjusted_time}s remaining')
     
     @sio.event
     async def code_change(sid, data):
@@ -223,6 +304,51 @@ if handlers_available:
         room_id = data.get('roomId', '')
         exists = room_id in rooms and rooms[room_id].get('teacher') is not None
         return {'valid': exists, 'roomId': room_id}
+
+    @sio.event
+    async def leave_room(sid, data=None):
+        """Explicit leave — if teacher, end the entire session."""
+        for room_id, room_data in list(rooms.items()):
+            if room_data.get('teacher') == sid:
+                print(f'[LEAVE_ROOM] Teacher {sid} explicitly ending room {room_id}')
+                await sio.emit('room_closed', {
+                    'message': 'The host has ended the session.'
+                }, room=room_id)
+                for student_sid in list(room_data.get('students', {}).keys()):
+                    try:
+                        await sio.disconnect(student_sid)
+                    except Exception:
+                        pass
+                del rooms[room_id]
+                print(f'[LEAVE_ROOM] Room {room_id} deleted')
+                return
+            elif sid in room_data.get('students', {}):
+                # Student leaving — just remove them
+                student = room_data['students'].pop(sid, {})
+                teacher_sid = room_data.get('teacher')
+                if teacher_sid:
+                    await sio.emit('student_list_update', {
+                        'students': room_data['students']
+                    }, to=teacher_sid)
+                print(f'[LEAVE_ROOM] Student {sid} ({student.get("name", "")}) left room {room_id}')
+                return
+
+    @sio.event
+    async def sync_timer(sid, data):
+        """Teacher broadcasts timer state to all students in the room."""
+        for room_id, room_data in rooms.items():
+            if room_data.get('teacher') == sid:
+                time_remaining = data.get('timeRemaining', 0)
+                # Store in room data for new joiners
+                room_data['timer_remaining'] = time_remaining
+                room_data['timer_updated_at'] = time.time()
+                # Broadcast to all students
+                for student_sid in room_data.get('students', {}).keys():
+                    await sio.emit('timer_sync', {
+                        'timeRemaining': time_remaining,
+                        'serverTime': time.time()
+                    }, to=student_sid)
+                break
 
 
 # FastAPI routes (optional - for health checks, etc.)

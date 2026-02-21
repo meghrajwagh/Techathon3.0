@@ -62,10 +62,9 @@ async def handle_join_room(sid, sio, rooms, data):
         # Emit role_assigned event to socket with student role
         await sio.emit('role_assigned', {'role': 'student'}, room=sid)
         
-        # Send teacher's current code to the new student (if teacher has any code)
-        # Note: We don't store teacher's code in backend, so students will receive it
-        # when teacher types. For now, send empty code to initialize the view.
-        await sio.emit('teacher_code_change', {'code': ''}, room=sid)
+        # Note: Teacher's current code will be sent by the teacher's frontend
+        # when it detects a new student joined (via student count change).
+        # Do NOT send empty code here — it overwrites the student's shared view.
         
         # Emit student_list_update to teacher socket with all students
         teacher_socket_id = rooms[room_id]['teacher']

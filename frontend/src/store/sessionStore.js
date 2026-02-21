@@ -3,13 +3,17 @@
  * Manages session state: session ID, role (host/participant),
  * 1-hour countdown timer, and participant list
  * 
+ * Timer sync: The teacher is the source of truth for the timer.
+ * Every 10 seconds the teacher broadcasts its time to the backend,
+ * which relays it to all students so everyone stays in sync.
+ * 
  * Uses localStorage persistence so sessions survive page refresh.
  */
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import socketService from '@/services/socketService';
 
-/** Generate a short unique session ID (6 chars, like Google Meet) */
+/** Generate a short unique session ID (9 chars, like Google Meet) */
 const generateSessionId = () => {
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
     const segments = [];
@@ -26,24 +30,21 @@ const generateSessionId = () => {
 /** Session duration: 1 hour in seconds */
 const SESSION_DURATION = 60 * 60;
 
+/** How often the teacher syncs its timer to students (ms) */
+const TIMER_SYNC_INTERVAL = 10_000;
+
 const useSessionStore = create(
     devtools(
         persist(
             (set, get) => ({
                 // ---- State ----
-                /** Current session ID (null = no session) */
                 sessionId: null,
-                /** Role of the current user: 'host' | 'participant' | null */
                 role: null,
-                /** Remaining session time in seconds */
                 timeRemaining: SESSION_DURATION,
-                /** Timer interval reference */
                 _timerId: null,
-                /** Whether session is active */
+                _syncTimerId: null,
                 isActive: false,
-                /** Host display name */
                 hostName: '',
-                /** Participant display name */
                 userName: '',
 
                 // ---- Actions ----
@@ -98,7 +99,7 @@ const useSessionStore = create(
                         timeRemaining: SESSION_DURATION,
                     }, false, 'joinSession');
 
-                    // Start the countdown timer
+                    // Start the countdown timer (will be overridden by server sync)
                     get()._startTimer();
 
                     // Wait for socket to be connected before emitting
@@ -151,8 +152,14 @@ const useSessionStore = create(
 
                 /** Leave / end the current session */
                 endSession: () => {
-                    const { _timerId } = get();
+                    const { _timerId, _syncTimerId } = get();
                     if (_timerId) clearInterval(_timerId);
+                    if (_syncTimerId) clearInterval(_syncTimerId);
+
+                    // Notify the backend that we're explicitly leaving
+                    if (socketService.isConnected()) {
+                        socketService.emit('leave_room', {});
+                    }
 
                     set({
                         sessionId: null,
@@ -160,21 +167,30 @@ const useSessionStore = create(
                         isActive: false,
                         timeRemaining: SESSION_DURATION,
                         _timerId: null,
+                        _syncTimerId: null,
                         hostName: '',
                         userName: '',
                     }, false, 'endSession');
 
-                    // Disconnect socket when ending session
                     socketService.disconnect();
-
                     console.log('[SESSION] Session ended');
+                },
+
+                /** Receive timer sync from server (students only) */
+                receiveTimerSync: (serverTimeRemaining) => {
+                    const { role } = get();
+                    if (role !== 'participant') return; // Only students sync from server
+                    console.log('[TIMER_SYNC] Received server time:', serverTimeRemaining);
+                    set({ timeRemaining: serverTimeRemaining }, false, 'timerSync');
                 },
 
                 /** Internal: start the 1-second countdown timer */
                 _startTimer: () => {
-                    const { _timerId } = get();
+                    const { _timerId, _syncTimerId } = get();
                     if (_timerId) clearInterval(_timerId);
+                    if (_syncTimerId) clearInterval(_syncTimerId);
 
+                    // Countdown every second
                     const timerId = setInterval(() => {
                         const { timeRemaining } = get();
                         if (timeRemaining <= 0) {
@@ -187,6 +203,23 @@ const useSessionStore = create(
                     }, 1000);
 
                     set({ _timerId: timerId }, false, '_startTimer');
+
+                    // If this user is the host, broadcast timer to students every 10s
+                    const { role } = get();
+                    if (role === 'host') {
+                        const syncTimerId = setInterval(() => {
+                            const { timeRemaining, isActive } = get();
+                            if (!isActive) {
+                                clearInterval(syncTimerId);
+                                return;
+                            }
+                            if (socketService.isConnected()) {
+                                socketService.emit('sync_timer', { timeRemaining });
+                            }
+                        }, TIMER_SYNC_INTERVAL);
+
+                        set({ _syncTimerId: syncTimerId }, false, '_startTimerSync');
+                    }
                 },
             }),
             {

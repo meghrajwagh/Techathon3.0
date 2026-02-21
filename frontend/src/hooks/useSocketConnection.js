@@ -1,7 +1,7 @@
 /**
  * useSocketConnection Hook
  * Manages Socket.IO connection lifecycle and integrates with stores.
- * Handles auto-rejoin on reconnect/refresh.
+ * Handles auto-rejoin on reconnect/refresh, timer sync, and room closure.
  */
 import { useEffect, useRef } from 'react';
 import socketService from '@/services/socketService';
@@ -11,7 +11,7 @@ import useStudentStore from '@/store/studentStore';
 
 export const useSocketConnection = () => {
     const { setConnected, resetReconnect, incrementReconnect } = useSocketStore();
-    const { sessionId, role, userName, isActive, rejoinSession } = useSessionStore();
+    const { sessionId, role, userName, isActive, rejoinSession, endSession, receiveTimerSync } = useSessionStore();
     const hasRejoined = useRef(false);
 
     useEffect(() => {
@@ -67,13 +67,35 @@ export const useSocketConnection = () => {
             }
         });
 
+        // ───── Timer sync from server (students receive host time) ─────
+        socket.on('timer_sync', (data) => {
+            console.log('[SOCKET] Timer sync received:', data.timeRemaining);
+            receiveTimerSync(data.timeRemaining);
+        });
+
+        // ───── Room closed by host ─────
+        socket.on('room_closed', (data) => {
+            console.log('[SOCKET] Room closed by host:', data.message);
+            // Alert the user and end the session
+            alert(data.message || 'The host has ended the session.');
+            endSession();
+        });
+
         // Cleanup on unmount
         return () => {
             console.log('[SOCKET] Cleaning up connection');
+            socket.off('connect');
+            socket.off('disconnect');
+            socket.off('connect_error');
+            socket.off('reconnect_attempt');
+            socket.off('reconnect');
+            socket.off('role_assigned');
+            socket.off('restore_code');
+            socket.off('timer_sync');
+            socket.off('room_closed');
             socketService.disconnect();
         };
-    }, [setConnected, resetReconnect, incrementReconnect, sessionId, role, userName, isActive, rejoinSession]);
+    }, [setConnected, resetReconnect, incrementReconnect, sessionId, role, userName, isActive, rejoinSession, endSession, receiveTimerSync]);
 
     return socketService;
 };
-
