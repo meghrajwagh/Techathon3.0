@@ -1,0 +1,135 @@
+/* ==========================================
+ * Custom Animations - Antigravity Motion
+ * Smooth, purposeful animations
+ * ========================================== */
+
+/* ---- Floating effect ---- */
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-4px);
+    }
+}
+
+.animate-float {
+    animation: float 3s ease-in-out infinite;
+}
+
+/* ---- Glow pulse for active elements ---- */
+@keyframes glowPulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+    }
+
+    50% {
+        box-shadow: 0 0 20px 4px rgba(59, 130, 246, 0.15);
+    }
+}
+
+.animate-glow-pulse {
+    animation: glowPulse 2s ease-in-out infinite;
+}
+
+/* ---- Shimmer loading effect ---- */
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.animate-shimmer {
+    background: linear-gradient(90deg,
+            #1a1f2e 0%,
+            #252a3a 50%,
+            #1a1f2e 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* ---- Status dot pulse (online indicator) ---- */
+@keyframes statusPulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.3);
+        opacity: 0.7;
+    }
+}
+
+.animate-status-pulse {
+    animation: statusPulse 2s ease-in-out infinite;
+}
+
+/* ---- Typing indicator ---- */
+@keyframes typingDot {
+
+    0%,
+    60%,
+    100% {
+        transform: translateY(0);
+    }
+
+    30% {
+        transform: translateY(-4px);
+    }
+}
+
+.animate-typing-dot {
+    animation: typingDot 1.4s ease-in-out infinite;
+}
+
+/* ---- Slide transitions ---- */
+.slide-enter {
+    transform: translateX(100%);
+    opacity: 0;
+}
+
+.slide-enter-active {
+    transform: translateX(0);
+    opacity: 1;
+    transition: all 0.3s ease-out;
+}
+
+.slide-exit {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.slide-exit-active {
+    transform: translateX(100%);
+    opacity: 0;
+    transition: all 0.3s ease-in;
+}
+
+/* ---- Scale-in for modals ---- */
+@keyframes scaleIn {
+    0% {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.animate-scale-in {
+    animation: scaleIn 0.2s ease-out;
+}
