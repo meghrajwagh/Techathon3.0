@@ -10,7 +10,7 @@ import socketio
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.execution.execution import run_code
+from app.execution.execution import run_code as execute_code
 
 # Initialize FastAPI application
 app = FastAPI(title="Classroom Coding Platform")
@@ -47,9 +47,12 @@ try:
     from app.handlers.promote_student import handle_promote_student
     from app.handlers.disconnect import handle_disconnect
     handlers_available = True
-except ImportError:
+    print('[SERVER] All handler modules loaded successfully')
+except ImportError as e:
     handlers_available = False
-    print('[SERVER] Warning: Handler modules not yet implemented')
+    print(f'[SERVER] Warning: Handler import failed: {e}')
+    import traceback
+    traceback.print_exc()
 
 
 # Socket.IO event handlers
@@ -70,7 +73,7 @@ async def run_code(sid, data):
     code = data.get("code")
     timeout = data.get("timeout", 30)
 
-    result = await run_code(code, timeout)
+    result = await execute_code(code, timeout)
 
     await sio.emit("code_result", result, to=sid)
 
