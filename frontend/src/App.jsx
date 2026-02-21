@@ -11,7 +11,7 @@ import useSessionStore from './store/sessionStore'
 /**
  * SessionScreen — The "ORCA" Home Page for Creating or Joining a session
  */
-const SessionScreen = () => {
+const SessionScreen = ({ onEnter }) => {
   const [mode, setMode] = useState(null); // null | 'create' | 'join'
   const [name, setName] = useState('');
   const [joinId, setJoinId] = useState('');
@@ -193,7 +193,7 @@ const SessionScreen = () => {
                       </div>
 
                       <button
-                        onClick={() => window.location.reload()}
+                        onClick={onEnter}
                         className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-neutral-200 transition-all"
                       >
                         Enter Meeting
@@ -297,9 +297,10 @@ const SessionScreen = () => {
  */
 const App = () => {
   const { sessionId, role, isActive, endSession } = useSessionStore();
+  const [hasEntered, setHasEntered] = useState(false);
 
   /** Whether user is in an active session */
-  const inSession = sessionId && role && isActive;
+  const inSession = sessionId && role && isActive && (role === 'participant' || hasEntered);
 
   return (
     <ErrorBoundary>
@@ -312,7 +313,7 @@ const App = () => {
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.3 }}
           >
-            <SessionScreen />
+            <SessionScreen onEnter={() => setHasEntered(true)} />
           </motion.div>
         ) : role === 'host' ? (
           <motion.div
@@ -323,7 +324,7 @@ const App = () => {
             transition={{ duration: 0.3 }}
             className="h-screen"
           >
-            <TeacherDashboard onBackToRoleSelect={endSession} />
+            <TeacherDashboard onBackToRoleSelect={() => { setHasEntered(false); endSession(); }} />
           </motion.div>
         ) : (
           <motion.div
@@ -334,7 +335,7 @@ const App = () => {
             transition={{ duration: 0.3 }}
             className="h-screen"
           >
-            <StudentDashboard onBackToRoleSelect={endSession} />
+            <StudentDashboard onBackToRoleSelect={() => { setHasEntered(false); endSession(); }} />
           </motion.div>
         )}
       </AnimatePresence>
