@@ -28,7 +28,13 @@ const StudentPanel = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("name");
   const [expandedId, setExpandedId] = useState(null);
-  const [previewStudent, setPreviewStudent] = useState(null);
+  const [previewStudentId, setPreviewStudentId] = useState(null);
+
+  // Derive live student data from the students prop so it stays reactive
+  const previewStudent = useMemo(
+    () => students.find((s) => s.id === previewStudentId) || null,
+    [students, previewStudentId]
+  );
 
   const filteredStudents = useMemo(() => {
     let filtered = students.filter((s) =>
@@ -114,11 +120,10 @@ const StudentPanel = ({
                   <button
                     key={option}
                     onClick={() => setSortBy(option)}
-                    className={`px-2 py-0.5 rounded text-[10px] ${
-                      sortBy === option
-                        ? "bg-accent-blue/20 text-accent-blue"
-                        : "text-text-tertiary"
-                    }`}
+                    className={`px-2 py-0.5 rounded text-[10px] ${sortBy === option
+                      ? "bg-accent-blue/20 text-accent-blue"
+                      : "text-text-tertiary"
+                      }`}
                   >
                     {option.charAt(0).toUpperCase() + option.slice(1)}
                   </button>
@@ -148,9 +153,8 @@ const StudentPanel = ({
                         {student.name}
                       </span>
                       <ChevronDown
-                        className={`w-4 h-4 transition-transform ${
-                          isExpanded ? "rotate-180" : ""
-                        }`}
+                        className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""
+                          }`}
                       />
                     </button>
 
@@ -184,7 +188,7 @@ const StudentPanel = ({
                           {/* Actions */}
                           <div className="flex items-center justify-between">
                             <button
-                              onClick={() => setPreviewStudent(student)}
+                              onClick={() => setPreviewStudentId(student.id)}
                               className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition"
                             >
                               <Eye className="w-4 h-4" />
@@ -201,11 +205,10 @@ const StudentPanel = ({
 
                             <button
                               onClick={() => onPromoteStudent?.(student)}
-                              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition ${
-                                student.id === promotedStudentId
-                                  ? "bg-accent-blue text-white"
-                                  : "bg-accent-blue/20 text-accent-blue hover:bg-accent-blue/30"
-                              }`}
+                              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition ${student.id === promotedStudentId
+                                ? "bg-accent-blue text-white"
+                                : "bg-accent-blue/20 text-accent-blue hover:bg-accent-blue/30"
+                                }`}
                             >
                               <Monitor className="w-4 h-4" />
                               <span className="text-sm">
@@ -234,7 +237,7 @@ const StudentPanel = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setPreviewStudent(null)}
+              onClick={() => setPreviewStudentId(null)}
               className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
             />
 
@@ -252,7 +255,7 @@ const StudentPanel = ({
                     Viewing: {previewStudent.name}
                   </h3>
                   <button
-                    onClick={() => setPreviewStudent(null)}
+                    onClick={() => setPreviewStudentId(null)}
                     className="p-2 rounded hover:bg-background-tertiary"
                   >
                     <X className="w-4 h-4" />
@@ -284,7 +287,7 @@ const StudentPanel = ({
                 <div className="flex items-center justify-end gap-3 px-4 py-3 border-t border-white/[0.04]">
                   <button
                     onClick={() => {
-                      setPreviewStudent(null);
+                      setPreviewStudentId(null);
                       onEditCode?.(previewStudent);
                     }}
                     className="flex items-center gap-2 px-4 py-2 rounded-md bg-background-tertiary hover:bg-background-primary text-sm"
@@ -297,11 +300,10 @@ const StudentPanel = ({
                     onClick={() =>
                       onPromoteStudent?.(previewStudent)
                     }
-                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm ${
-                      previewStudent.id === promotedStudentId
-                        ? "bg-accent-blue text-white"
-                        : "bg-accent-blue/20 text-accent-blue hover:bg-accent-blue/30"
-                    }`}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm ${previewStudent.id === promotedStudentId
+                      ? "bg-accent-blue text-white"
+                      : "bg-accent-blue/20 text-accent-blue hover:bg-accent-blue/30"
+                      }`}
                   >
                     <Monitor className="w-4 h-4" />
                     {previewStudent.id === promotedStudentId

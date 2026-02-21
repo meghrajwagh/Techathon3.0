@@ -161,6 +161,7 @@ const TeacherDashboard = ({ onBackToRoleSelect }) => {
       />
 
       <div ref={containerRef} className="flex flex-1 overflow-hidden relative">
+        {/* Teacher's editor - full width when no student selected, split when student is selected */}
         <AnimatePresence>
           {isTeacherVisible && (
             <motion.div
@@ -169,7 +170,7 @@ const TeacherDashboard = ({ onBackToRoleSelect }) => {
               exit={{ x: "-100%" }}
               transition={{ duration: 0.3 }}
               className="flex flex-col border-r border-white/[0.04]"
-              style={{ width: `${splitRatio}%` }}
+              style={{ width: selectedStudent ? `${splitRatio}%` : "100%" }}
             >
               <div className="flex-1 min-h-0">
                 <CodeEditor
@@ -194,24 +195,24 @@ const TeacherDashboard = ({ onBackToRoleSelect }) => {
           )}
         </AnimatePresence>
 
-        {isTeacherVisible && (
+        {/* Draggable divider - only visible when viewing a student */}
+        {isTeacherVisible && selectedStudent && (
           <div
             onMouseDown={handleMouseDown}
             className="w-1 cursor-col-resize bg-white/[0.05] hover:bg-accent-blue transition-colors"
           />
         )}
 
-        <motion.div
-          layout
-          transition={{ duration: 0.3 }}
-          className="flex flex-col bg-background-secondary"
-          style={{
-            width: isTeacherVisible ? `${100 - splitRatio}%` : "100%",
-          }}
-        >
-          {selectedStudent ? (
-            <>
-
+        {/* Student panel - only shown when a student is selected */}
+        <AnimatePresence>
+          {selectedStudent && (
+            <motion.div
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: isTeacherVisible ? `${100 - splitRatio}%` : "100%", opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="flex flex-col bg-background-secondary overflow-hidden"
+            >
               <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between bg-background-primary shadow-sm">
                 <span className="text-base font-semibold text-white">
                   Viewing: {selectedStudent.name}
@@ -244,6 +245,14 @@ const TeacherDashboard = ({ onBackToRoleSelect }) => {
                       Edit
                     </button>
                   )}
+
+                  <button
+                    onClick={() => selectStudent(null)}
+                    className="px-3 py-2 rounded-xl text-sm font-semibold bg-white/[0.06] text-text-secondary hover:bg-white/[0.1] hover:text-text-primary transition-all"
+                    title="Close student view"
+                  >
+                    ✕
+                  </button>
                 </div>
               </div>
 
@@ -272,13 +281,9 @@ const TeacherDashboard = ({ onBackToRoleSelect }) => {
                   className="h-full rounded-none"
                 />
               </div>
-            </>
-          ) : (
-            <div className="flex items-center justify-center flex-1 text-text-tertiary text-sm">
-              No participants yet
-            </div>
+            </motion.div>
           )}
-        </motion.div>
+        </AnimatePresence>
       </div>
 
       <StudentPanel

@@ -72,10 +72,28 @@ async def disconnect(sid):
 async def run_code(sid, data):
     code = data.get("code")
     timeout = data.get("timeout", 30)
+    language = data.get("language", "python")
 
-    result = await execute_code(code, timeout)
+    result = await execute_code(code, timeout, language)
 
     await sio.emit("code_result", result, to=sid)
+
+    # Also forward the output to the teacher if this student is in a room
+    for room_id, room_data in rooms.items():
+        if sid in room_data.get('students', {}):
+            # Store output in student data
+            room_data['students'][sid]['output'] = result.get('output', '')
+            room_data['students'][sid]['error'] = result.get('error', None)
+            # Forward to teacher
+            teacher_sid = room_data.get('teacher')
+            if teacher_sid:
+                await sio.emit('student_output', {
+                    'studentId': sid,
+                    'output': result.get('output', ''),
+                    'error': result.get('error', None)
+                }, to=teacher_sid)
+                print(f'[RUN_CODE] Forwarded output from student {sid} to teacher {teacher_sid}')
+            break
 
 
 if handlers_available:

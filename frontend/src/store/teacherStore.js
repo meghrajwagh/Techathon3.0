@@ -72,6 +72,20 @@ const useTeacherStore = create(
                 }));
             },
 
+            updateStudentOutput: (studentId, output, error) => {
+                set((s) => ({
+                    students: s.students.map((stu) =>
+                        stu.id === studentId
+                            ? { ...stu, output, error, outputPreview: output ? output.substring(0, 50) + '...' : 'No output yet' }
+                            : stu
+                    ),
+                    selectedStudent:
+                        s.selectedStudent?.id === studentId
+                            ? { ...s.selectedStudent, output, error }
+                            : s.selectedStudent,
+                }));
+            },
+
             // 🔥 TAKE CONTROL
             takeControl: (studentId) => {
                 set({ controlledStudentId: studentId });

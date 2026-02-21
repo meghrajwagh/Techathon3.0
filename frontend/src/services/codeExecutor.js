@@ -59,6 +59,7 @@ export async function executeCode(code, language) {
         // Emit the code execution request
         socket.emit('run_code', {
             code,
+            language,
             timeout: 10,
         });
     });
