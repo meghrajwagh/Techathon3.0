@@ -1,15 +1,18 @@
 /**
  * useSocketConnection Hook
- * Manages Socket.IO connection lifecycle and integrates with stores
+ * Manages Socket.IO connection lifecycle and integrates with stores.
+ * Handles auto-rejoin on reconnect/refresh.
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import socketService from '@/services/socketService';
 import useSocketStore from '@/store/socketStore';
 import useSessionStore from '@/store/sessionStore';
+import useStudentStore from '@/store/studentStore';
 
 export const useSocketConnection = () => {
     const { setConnected, resetReconnect, incrementReconnect } = useSocketStore();
-    const { sessionId, role, userName } = useSessionStore();
+    const { sessionId, role, userName, isActive, rejoinSession } = useSessionStore();
+    const hasRejoined = useRef(false);
 
     useEffect(() => {
         // Initialize socket connection
@@ -21,13 +24,18 @@ export const useSocketConnection = () => {
             setConnected(true);
             resetReconnect();
 
-            // Note: join_room is handled by sessionStore.createSession/joinSession
-            // We don't emit it here to avoid duplicate joins
+            // Auto-rejoin if we have an active session (e.g. after page refresh)
+            if (isActive && sessionId && role && !hasRejoined.current) {
+                hasRejoined.current = true;
+                console.log('[SOCKET] Auto-rejoining session after connect:', sessionId);
+                rejoinSession();
+            }
         });
 
         socket.on('disconnect', (reason) => {
             console.log('[SOCKET] Disconnected:', reason);
             setConnected(false);
+            hasRejoined.current = false;  // Allow rejoin on next connect
         });
 
         socket.on('connect_error', (error) => {
@@ -48,8 +56,15 @@ export const useSocketConnection = () => {
         // Handle role assignment from backend
         socket.on('role_assigned', (data) => {
             console.log('[SOCKET] Role assigned from backend:', data.role);
-            // Backend sends 'teacher' or 'student', but we don't need to change our role
-            // since we already set it when creating/joining the session
+        });
+
+        // Handle code restoration (for students rejoining)
+        socket.on('restore_code', (data) => {
+            console.log('[SOCKET] Restoring code from server:', data);
+            const { setCode } = useStudentStore.getState();
+            if (data.code) {
+                setCode(data.code);
+            }
         });
 
         // Cleanup on unmount
@@ -57,7 +72,7 @@ export const useSocketConnection = () => {
             console.log('[SOCKET] Cleaning up connection');
             socketService.disconnect();
         };
-    }, [setConnected, resetReconnect, incrementReconnect, sessionId, role, userName]);
+    }, [setConnected, resetReconnect, incrementReconnect, sessionId, role, userName, isActive, rejoinSession]);
 
     return socketService;
 };

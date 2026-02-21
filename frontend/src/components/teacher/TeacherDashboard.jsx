@@ -261,8 +261,14 @@ const TeacherDashboard = ({ onBackToRoleSelect }) => {
                   value={selectedStudent.code}
                   onChange={
                     isControlling
-                      ? (val) =>
-                        updateStudentCode(selectedStudent.id, val)
+                      ? (val) => {
+                        updateStudentCode(selectedStudent.id, val);
+                        // Send the edit to the student in real-time
+                        socketService.emit('teacher_edit_student_code', {
+                          studentId: selectedStudent.id,
+                          code: val
+                        });
+                      }
                       : undefined
                   }
                   language={language}

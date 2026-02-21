@@ -149,9 +149,23 @@ const StudentPanel = ({
                       }
                       className="w-full px-4 py-3 flex items-center justify-between text-left"
                     >
-                      <span className="text-sm text-text-primary font-medium">
-                        {student.name}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {/* Status dot: green = has output, red = has error, gray = nothing yet */}
+                        <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${student.error
+                            ? 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]'
+                            : student.output
+                              ? 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.5)]'
+                              : 'bg-white/20'
+                          }`} />
+                        <span className={`text-sm font-medium ${student.error
+                            ? 'text-red-400'
+                            : student.output
+                              ? 'text-green-400'
+                              : 'text-text-primary'
+                          }`}>
+                          {student.name}
+                        </span>
+                      </div>
                       <ChevronDown
                         className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""
                           }`}

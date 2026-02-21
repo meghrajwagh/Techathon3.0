@@ -10,6 +10,7 @@ import ErrorBoundary from '@/components/common/ErrorBoundary';
 import TeacherDashboard from '@/components/teacher/TeacherDashboard';
 import StudentDashboard from '@/components/student/StudentDashboard';
 import useSessionStore from '@/store/sessionStore';
+import socketService from '@/services/socketService';
 import { useSocketConnection } from '@/hooks/useSocketConnection';
 
 import Waves from '@/components/Waves';
@@ -44,8 +45,25 @@ const SessionScreen = () => {
             setError('Please enter a session code');
             return;
         }
-        setError('');
-        joinSession(joinId.trim().toLowerCase(), name.trim());
+
+        const roomCode = joinId.trim().toLowerCase();
+
+        // Validate room exists on the backend before joining
+        const socket = socketService.socket;
+        if (socket && socket.connected) {
+            socket.emit('validate_room', { roomId: roomCode }, (response) => {
+                if (response && response.valid) {
+                    setError('');
+                    joinSession(roomCode, name.trim());
+                } else {
+                    setError('Invalid session code. Please check and try again.');
+                }
+            });
+        } else {
+            // If socket isn't connected yet, try joining anyway (will reconnect)
+            setError('');
+            joinSession(roomCode, name.trim());
+        }
     }, [name, joinId, joinSession]);
 
     return (

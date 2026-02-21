@@ -67,12 +67,19 @@ export const useStudentSocket = () => {
             setSharedOutput(data.output || '', data.error || null);
         };
 
+        // Listen for teacher editing student's code directly
+        const handleTeacherEditCode = (data) => {
+            console.log('[STUDENT] Teacher edited my code');
+            setCode(data.code);
+        };
+
         // Register event listeners
         socket.on('teacher_take_control', handleTeacherTakeControl);
         socket.on('teacher_release_control', handleTeacherReleaseControl);
         socket.on('shared_code', handleSharedCode);
         socket.on('teacher_code_change', handleTeacherCodeChange);
         socket.on('teacher_output', handleTeacherOutput);
+        socket.on('teacher_edit_code', handleTeacherEditCode);
 
         // Cleanup
         return () => {
@@ -81,6 +88,7 @@ export const useStudentSocket = () => {
             socket.off('shared_code', handleSharedCode);
             socket.off('teacher_code_change', handleTeacherCodeChange);
             socket.off('teacher_output', handleTeacherOutput);
+            socket.off('teacher_edit_code', handleTeacherEditCode);
         };
     }, [role, sessionId, userName, setCode, setSharedCode, setControlled]);
 

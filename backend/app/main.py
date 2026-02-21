@@ -39,6 +39,10 @@ socket_app = socketio.ASGIApp(sio, app)
 # Structure: {roomId: {teacher: socketId, students: {socketId: {name, code, output}}, mainView: {type, studentId}}}
 rooms = {}
 
+# Store disconnected student data by (roomId, userName) for rejoin support
+# Structure: {(roomId, userName): {code, output, error}}
+disconnected_students = {}
+
 # Import event handlers
 try:
     from app.handlers.join_room import handle_join_room
@@ -64,7 +68,19 @@ async def connect(sid, environ):
 
 @sio.event
 async def disconnect(sid):
-    """Handle disconnect event"""
+    """Handle disconnect event - save student data before removing"""
+    # Save student data for potential rejoin
+    for room_id, room_data in rooms.items():
+        if sid in room_data.get('students', {}):
+            student = room_data['students'][sid]
+            key = (room_id, student.get('name', ''))
+            disconnected_students[key] = {
+                'code': student.get('code', ''),
+                'output': student.get('output', ''),
+                'error': student.get('error', None)
+            }
+            print(f'[DISCONNECT] Saved data for student "{student.get("name", "")}" in room {room_id}')
+            break
     if handlers_available:
         await handle_disconnect(sid, sio, rooms)
 
@@ -99,8 +115,25 @@ async def run_code(sid, data):
 if handlers_available:
     @sio.event
     async def join_room(sid, data):
-        """Handle join_room event"""
+        """Handle join_room event with rejoin support"""
+        room_id = data.get('roomId', '')
+        user_name = data.get('userName', '')
+        
         await handle_join_room(sid, sio, rooms, data)
+        
+        # Restore saved data if student is rejoining
+        key = (room_id, user_name)
+        if key in disconnected_students and sid in rooms.get(room_id, {}).get('students', {}):
+            saved = disconnected_students.pop(key)
+            rooms[room_id]['students'][sid]['code'] = saved.get('code', '')
+            rooms[room_id]['students'][sid]['output'] = saved.get('output', '')
+            rooms[room_id]['students'][sid]['error'] = saved.get('error', None)
+            # Send the restored code back to the student
+            await sio.emit('restore_code', {
+                'code': saved.get('code', ''),
+                'output': saved.get('output', ''),
+            }, to=sid)
+            print(f'[REJOIN] Restored data for student "{user_name}" in room {room_id}')
     
     @sio.event
     async def code_change(sid, data):
@@ -145,6 +178,51 @@ if handlers_available:
                     }, room=student_sid)
                 print(f'[TEACHER_OUTPUT] Broadcasted output to {len(room_data.get("students", {}))} students in room {room_id}')
                 break
+    
+    @sio.event
+    async def teacher_edit_student_code(sid, data):
+        """Handle teacher editing a student's code and forward to that student"""
+        student_id = data.get('studentId')
+        code = data.get('code', '')
+        
+        for room_id, room_data in rooms.items():
+            if room_data.get('teacher') == sid:
+                if student_id in room_data.get('students', {}):
+                    # Update code in server state
+                    room_data['students'][student_id]['code'] = code
+                    # Forward the edit to the student
+                    await sio.emit('teacher_edit_code', {'code': code}, to=student_id)
+                    print(f'[TEACHER_EDIT] Teacher {sid} edited student {student_id} code in room {room_id}')
+                break
+    
+    @sio.event
+    async def teacher_take_control(sid, data):
+        """Handle teacher taking control of student's editor"""
+        student_id = data.get('studentId')
+        for room_id, room_data in rooms.items():
+            if room_data.get('teacher') == sid:
+                if student_id in room_data.get('students', {}):
+                    await sio.emit('teacher_take_control', {}, to=student_id)
+                    print(f'[CONTROL] Teacher took control of student {student_id}')
+                break
+    
+    @sio.event
+    async def teacher_release_control(sid, data):
+        """Handle teacher releasing control of student's editor"""
+        student_id = data.get('studentId')
+        for room_id, room_data in rooms.items():
+            if room_data.get('teacher') == sid:
+                if student_id in room_data.get('students', {}):
+                    await sio.emit('teacher_release_control', {}, to=student_id)
+                    print(f'[CONTROL] Teacher released control of student {student_id}')
+                break
+    
+    @sio.event
+    async def validate_room(sid, data):
+        """Check if a room exists (teacher has created it)"""
+        room_id = data.get('roomId', '')
+        exists = room_id in rooms and rooms[room_id].get('teacher') is not None
+        return {'valid': exists, 'roomId': room_id}
 
 
 # FastAPI routes (optional - for health checks, etc.)

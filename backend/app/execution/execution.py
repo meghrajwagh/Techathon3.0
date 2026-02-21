@@ -26,10 +26,21 @@ except Exception as e:
 async def run_code(code: str, timeout: int = 10, language: str = "python"):
     """
     Execute code and return output.
-    Uses Docker if available, otherwise falls back to subprocess.
+    - JavaScript always uses subprocess (Node.js)
+    - Python uses Docker if available, with subprocess fallback
     """
+    # JavaScript always runs via Node.js subprocess
+    if language in ("javascript", "js"):
+        return await _run_with_subprocess(code, timeout, language)
+
+    # Python: try Docker first, fall back to subprocess
     if docker_client is not None:
-        return await _run_with_docker(code, timeout)
+        result = await _run_with_docker(code, timeout)
+        # If Docker failed (e.g. missing image), fall back to subprocess
+        if result.get("error") and "No such image" in str(result.get("error", "")):
+            print(f"[EXECUTION] Docker failed, falling back to subprocess: {result['error']}")
+            return await _run_with_subprocess(code, timeout, language)
+        return result
     else:
         return await _run_with_subprocess(code, timeout, language)
 
