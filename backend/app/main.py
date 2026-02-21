@@ -10,7 +10,7 @@ import socketio
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from execution.execution import run_code
+from app.execution.execution import run_code
 
 # Initialize FastAPI application
 app = FastAPI(title="Classroom Coding Platform")
@@ -41,11 +41,11 @@ rooms = {}
 
 # Import event handlers
 try:
-    from handlers.join_room import handle_join_room
-    from handlers.code_change import handle_code_change
-    from handlers.open_student import handle_open_student
-    from handlers.promote_student import handle_promote_student
-    from handlers.disconnect import handle_disconnect
+    from app.handlers.join_room import handle_join_room
+    from app.handlers.code_change import handle_code_change
+    from app.handlers.open_student import handle_open_student
+    from app.handlers.promote_student import handle_promote_student
+    from app.handlers.disconnect import handle_disconnect
     handlers_available = True
 except ImportError:
     handlers_available = False

@@ -1,6 +1,8 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import docker
 import uuid
-import asyncio
 
 docker_client = docker.from_env()
 
@@ -14,7 +16,7 @@ async def run_code(code: str, timeout: int = 10):
             command=["python", "-u", "-c", code],
             name=container_name,
             mem_limit="256m",
-            cpu_quota=50000,  # ~50% CPU
+            cpu_quota=50000,
             network_mode="none",
             stdin_open=False,
             tty=False,
@@ -27,9 +29,7 @@ async def run_code(code: str, timeout: int = 10):
             container.wait(timeout=timeout)
         except Exception:
             container.kill()
-            return {
-                "error": "Execution timed out"
-            }
+            return {"error": "Execution timed out"}
 
         logs = container.logs(stdout=True, stderr=True).decode("utf-8")
         exit_code = container.attrs["State"]["ExitCode"]
@@ -40,9 +40,7 @@ async def run_code(code: str, timeout: int = 10):
         }
 
     except Exception as e:
-        return {
-            "error": str(e)
-        }
+        return {"error": str(e)}
 
     finally:
         if container:
