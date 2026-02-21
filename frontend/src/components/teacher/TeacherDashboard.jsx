@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useState, useRef } from "react";
 import useEditorStore from "@/store/editorStore";
 import useTeacherStore from "@/store/teacherStore";
 import useSocketStore from "@/store/socketStore";
+import socketService from "@/services/socketService";
 import { useCodeExecution } from "@/hooks/useCodeExecution";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useTeacherSocket } from "@/hooks/useTeacherSocket";
@@ -53,6 +54,14 @@ const TeacherDashboard = ({ onBackToRoleSelect }) => {
 
   const [isTeacherVisible, setIsTeacherVisible] = useState(true);
 
+  // Send initial code to students when component mounts or when students join
+  useEffect(() => {
+    if (isConnected && code) {
+      console.log('[TEACHER] Sending initial code to students:', code.substring(0, 50));
+      socketService.emit('teacher_code_change', { code });
+    }
+  }, [isConnected, students.length]); // Send when connected or when student count changes
+
   // 🔥 Split logic
   const [splitRatio, setSplitRatio] = useState(50);
   const containerRef = useRef(null);
@@ -93,17 +102,35 @@ const TeacherDashboard = ({ onBackToRoleSelect }) => {
     runCode(code, language);
   }, [code, language, runCode]);
 
+  // Broadcast teacher's output to students when it changes
+  useEffect(() => {
+    if (isConnected && (output || error)) {
+      console.log('[TEACHER] Broadcasting output to students');
+      socketService.emit('teacher_output', { output, error });
+    }
+  }, [output, error, isConnected]);
+
+  // Handle teacher code changes and broadcast to students
+  const handleTeacherCodeChange = useCallback((newCode) => {
+    setCode(newCode);
+    // Broadcast teacher's code to all students in the room
+    socketService.emit('teacher_code_change', {
+      code: newCode
+    });
+  }, [setCode]);
+
   useKeyboardShortcuts({
     onRun: handleRunCode,
     onSave: () => console.log("[CODE] Auto-saved"),
     onTogglePanel: () => (isPanelOpen ? closePanel() : openPanel()),
   });
 
-  useEffect(() => {
-    if (students.length > 0 && !selectedStudent) {
-      selectStudent(students[0]);
-    }
-  }, [students, selectedStudent, selectStudent]);
+  // Don't auto-select students - let teacher choose manually
+  // useEffect(() => {
+  //   if (students.length > 0 && !selectedStudent) {
+  //     selectStudent(students[0]);
+  //   }
+  // }, [students, selectedStudent, selectStudent]);
 
   const isControlling =
     selectedStudent && controlledStudentId === selectedStudent.id;
@@ -147,7 +174,7 @@ const TeacherDashboard = ({ onBackToRoleSelect }) => {
               <div className="flex-1 min-h-0">
                 <CodeEditor
                   value={code}
-                  onChange={setCode}
+                  onChange={handleTeacherCodeChange}
                   language={language}
                   fontSize={fontSize}
                   showMinimap={showMinimap}
@@ -195,8 +222,8 @@ const TeacherDashboard = ({ onBackToRoleSelect }) => {
                   <button
                     onClick={() => promoteStudent(selectedStudent.id)}
                     className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm ${promotedStudentId === selectedStudent.id
-                        ? "bg-accent-blue text-white shadow-md"
-                        : "bg-accent-blue/20 text-accent-blue hover:bg-accent-blue/30"
+                      ? "bg-accent-blue text-white shadow-md"
+                      : "bg-accent-blue/20 text-accent-blue hover:bg-accent-blue/30"
                       }`}
                   >
                     {promotedStudentId === selectedStudent.id ? "Shared" : "Share"}

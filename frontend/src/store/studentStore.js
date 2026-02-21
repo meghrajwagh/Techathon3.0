@@ -17,6 +17,8 @@ const useStudentStore = create(
             error: null,
             sharedCode: CODE_TEMPLATES.javascript,
             sharedLabel: "Teacher's View",
+            sharedOutput: '',
+            sharedError: null,
             isSharedMinimized: false,
 
             // 🔥 NEW
@@ -34,8 +36,15 @@ const useStudentStore = create(
             setError: (error) => set({ error, isRunning: false }),
             clearOutput: () => set({ output: '', error: null }),
 
-            setSharedCode: (sharedCode, sharedLabel) =>
-                set({ sharedCode, sharedLabel }),
+            setSharedCode: (sharedCode, sharedLabel) => {
+                console.log('[STUDENT_STORE] setSharedCode called with:', sharedCode, sharedLabel);
+                set({ sharedCode, sharedLabel });
+            },
+
+            setSharedOutput: (output, error) => {
+                console.log('[STUDENT_STORE] setSharedOutput called with output:', output, 'error:', error);
+                set({ sharedOutput: output, sharedError: error });
+            },
 
             toggleSharedMinimized: () =>
                 set((s) => ({ isSharedMinimized: !s.isSharedMinimized })),

@@ -14,10 +14,13 @@ async def handle_join_room(sid, sio, rooms, data):
         sid: The connecting socket's ID
         sio: SocketIO server instance for emitting events
         rooms: Reference to in-memory rooms state dictionary
-        data: Event data containing roomId
+        data: Event data containing roomId and optional userName
     """
-    # Extract roomId from event data
+    # Extract roomId and userName from event data
     room_id = data.get('roomId')
+    user_name = data.get('userName', '')
+    
+    print(f'[JOIN_ROOM] Received join_room event - sid: {sid}, roomId: {room_id}, userName: "{user_name}", data: {data}')
     
     if not room_id:
         print(f'[JOIN_ROOM] Error: No roomId provided by socket {sid}')
@@ -41,13 +44,14 @@ async def handle_join_room(sid, sio, rooms, data):
         # Emit role_assigned event to socket with teacher role
         await sio.emit('role_assigned', {'role': 'teacher'}, room=sid)
         
-        print(f'[JOIN_ROOM] Room {room_id} created. Teacher: {sid}')
+        print(f'[JOIN_ROOM] Room {room_id} created. Teacher: {sid} (name: "{user_name}")')
     
     else:
         # Room exists - assign student role
-        # Create student entry with sid as key
+        # Create student entry with sid as key and user's name
+        student_name = user_name if user_name else 'Anonymous'
         rooms[room_id]['students'][sid] = {
-            'name': '',
+            'name': student_name,
             'code': '',
             'output': ''
         }
@@ -58,10 +62,16 @@ async def handle_join_room(sid, sio, rooms, data):
         # Emit role_assigned event to socket with student role
         await sio.emit('role_assigned', {'role': 'student'}, room=sid)
         
+        # Send teacher's current code to the new student (if teacher has any code)
+        # Note: We don't store teacher's code in backend, so students will receive it
+        # when teacher types. For now, send empty code to initialize the view.
+        await sio.emit('teacher_code_change', {'code': ''}, room=sid)
+        
         # Emit student_list_update to teacher socket with all students
         teacher_socket_id = rooms[room_id]['teacher']
         await sio.emit('student_list_update', 
                       {'students': rooms[room_id]['students']}, 
                       room=teacher_socket_id)
         
-        print(f'[JOIN_ROOM] Student {sid} joined room {room_id}')
+        print(f'[JOIN_ROOM] Student {sid} (name: "{student_name}") joined room {room_id}. Total students: {len(rooms[room_id]["students"])}')
+        print(f'[JOIN_ROOM] Current students in room: {rooms[room_id]["students"]}')

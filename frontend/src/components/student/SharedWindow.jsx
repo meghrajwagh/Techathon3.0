@@ -9,12 +9,15 @@
  * @param {string} props.language - Programming language
  * @param {boolean} props.isMinimized - Whether the view is collapsed
  * @param {Function} props.onToggleMinimize - Toggle minimize
+ * @param {string} props.output - Output from code execution
+ * @param {string} props.error - Error from code execution
  */
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Monitor, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import CodeEditor from '@/components/editor/CodeEditor';
+import OutputPanel from '@/components/terminal/OutputPanel';
 
 const SharedWindow = ({
     code = '',
@@ -22,13 +25,12 @@ const SharedWindow = ({
     language = 'javascript',
     isMinimized = false,
     onToggleMinimize,
+    output = '',
+    error = null,
 }) => {
     return (
         <div
-            className={cn(
-                'flex flex-col border-r border-white/[0.04] bg-background-secondary transition-all duration-300 relative',
-                isMinimized ? 'w-10' : 'w-1/2'
-            )}
+            className="flex flex-col h-full border-r border-white/[0.04] bg-background-secondary transition-all duration-300 relative"
         >
             {/* Header bar */}
             <div className={cn(
@@ -70,15 +72,28 @@ const SharedWindow = ({
 
             {/* Shared code editor (read-only) — visible when not minimized */}
             {!isMinimized && (
-                <div className="flex-1 min-h-0">
-                    <CodeEditor
-                        value={code}
-                        language={language}
-                        readOnly={true}
-                        fontSize={13}
-                        showMinimap={false}
-                    />
-                </div>
+                <>
+                    <div className="flex-1 min-h-0">
+                        <CodeEditor
+                            value={code}
+                            language={language}
+                            readOnly={true}
+                            fontSize={13}
+                            showMinimap={false}
+                        />
+                    </div>
+
+                    {/* Output panel for teacher's output */}
+                    <div className="h-48 shrink-0 border-t border-white/[0.04]">
+                        <OutputPanel
+                            output={output}
+                            error={error}
+                            isRunning={false}
+                            onClear={() => { }}
+                            className="h-full rounded-none"
+                        />
+                    </div>
+                </>
             )}
         </div>
     );

@@ -98,6 +98,35 @@ if handlers_available:
     async def promote_student(sid, data):
         """Handle promote_student event"""
         await handle_promote_student(sid, sio, rooms, data)
+    
+    @sio.event
+    async def teacher_code_change(sid, data):
+        """Handle teacher code change and broadcast to students"""
+        # Find which room the teacher is in
+        for room_id, room_data in rooms.items():
+            if room_data.get('teacher') == sid:
+                # Broadcast to all students in the room
+                for student_sid in room_data.get('students', {}).keys():
+                    await sio.emit('teacher_code_change', {
+                        'code': data.get('code', '')
+                    }, room=student_sid)
+                print(f'[TEACHER_CODE_CHANGE] Broadcasted code to {len(room_data.get("students", {}))} students in room {room_id}')
+                break
+    
+    @sio.event
+    async def teacher_output(sid, data):
+        """Handle teacher output and broadcast to students"""
+        # Find which room the teacher is in
+        for room_id, room_data in rooms.items():
+            if room_data.get('teacher') == sid:
+                # Broadcast to all students in the room
+                for student_sid in room_data.get('students', {}).keys():
+                    await sio.emit('teacher_output', {
+                        'output': data.get('output', ''),
+                        'error': data.get('error', None)
+                    }, room=student_sid)
+                print(f'[TEACHER_OUTPUT] Broadcasted output to {len(room_data.get("students", {}))} students in room {room_id}')
+                break
 
 
 # FastAPI routes (optional - for health checks, etc.)

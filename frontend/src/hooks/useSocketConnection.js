@@ -9,7 +9,7 @@ import useSessionStore from '@/store/sessionStore';
 
 export const useSocketConnection = () => {
     const { setConnected, resetReconnect, incrementReconnect } = useSocketStore();
-    const { sessionId, role } = useSessionStore();
+    const { sessionId, role, userName } = useSessionStore();
 
     useEffect(() => {
         // Initialize socket connection
@@ -21,11 +21,8 @@ export const useSocketConnection = () => {
             setConnected(true);
             resetReconnect();
 
-            // If we have an active session, rejoin the room
-            if (sessionId && role) {
-                console.log('[SOCKET] Rejoining room:', sessionId);
-                socketService.emit('join_room', { roomId: sessionId });
-            }
+            // Note: join_room is handled by sessionStore.createSession/joinSession
+            // We don't emit it here to avoid duplicate joins
         });
 
         socket.on('disconnect', (reason) => {
@@ -48,12 +45,20 @@ export const useSocketConnection = () => {
             resetReconnect();
         });
 
+        // Handle role assignment from backend
+        socket.on('role_assigned', (data) => {
+            console.log('[SOCKET] Role assigned from backend:', data.role);
+            // Backend sends 'teacher' or 'student', but we don't need to change our role
+            // since we already set it when creating/joining the session
+        });
+
         // Cleanup on unmount
         return () => {
             console.log('[SOCKET] Cleaning up connection');
             socketService.disconnect();
         };
-    }, [setConnected, resetReconnect, incrementReconnect, sessionId, role]);
+    }, [setConnected, resetReconnect, incrementReconnect, sessionId, role, userName]);
 
     return socketService;
 };
+

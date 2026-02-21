@@ -48,6 +48,8 @@ const useSessionStore = create(
             /** Create a new session (user becomes host) */
             createSession: (hostName) => {
                 const sessionId = generateSessionId();
+                console.log('[SESSION] createSession called - hostName:', hostName);
+
                 set({
                     sessionId,
                     role: 'host',
@@ -60,15 +62,31 @@ const useSessionStore = create(
                 // Start the countdown timer
                 get()._startTimer();
 
-                // Emit join_room event to backend
-                socketService.emit('join_room', { roomId: sessionId });
+                // Wait for socket to be connected before emitting
+                const waitForSocketAndEmit = () => {
+                    if (socketService.isConnected()) {
+                        const payload = {
+                            roomId: sessionId,
+                            userName: hostName || 'Host'
+                        };
+                        console.log('[SESSION] Socket connected, emitting join_room with payload:', payload);
+                        socketService.emit('join_room', payload);
+                    } else {
+                        console.log('[SESSION] Socket not connected yet, waiting...');
+                        setTimeout(waitForSocketAndEmit, 100);
+                    }
+                };
 
-                console.log('[SESSION] Created session:', sessionId);
+                setTimeout(waitForSocketAndEmit, 100);
+
+                console.log('[SESSION] Created session:', sessionId, 'as host with name:', hostName);
                 return sessionId;
             },
 
             /** Join an existing session (user becomes participant) */
             joinSession: (sessionId, userName) => {
+                console.log('[SESSION] joinSession called - sessionId:', sessionId, 'userName:', userName);
+
                 set({
                     sessionId,
                     role: 'participant',
@@ -80,10 +98,24 @@ const useSessionStore = create(
                 // Start the countdown timer
                 get()._startTimer();
 
-                // Emit join_room event to backend
-                socketService.emit('join_room', { roomId: sessionId });
+                // Wait for socket to be connected before emitting
+                const waitForSocketAndEmit = () => {
+                    if (socketService.isConnected()) {
+                        const payload = {
+                            roomId: sessionId,
+                            userName: userName || 'Student'
+                        };
+                        console.log('[SESSION] Socket connected, emitting join_room with payload:', payload);
+                        socketService.emit('join_room', payload);
+                    } else {
+                        console.log('[SESSION] Socket not connected yet, waiting...');
+                        setTimeout(waitForSocketAndEmit, 100);
+                    }
+                };
 
-                console.log('[SESSION] Joined session:', sessionId);
+                setTimeout(waitForSocketAndEmit, 100);
+
+                console.log('[SESSION] Joined session:', sessionId, 'as participant with name:', userName);
             },
 
             /** Leave / end the current session */

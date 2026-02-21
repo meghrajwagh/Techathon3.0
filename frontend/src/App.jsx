@@ -182,6 +182,9 @@ const App = () => {
 
     const inSession = sessionId && role && isActive;
 
+    // Debug logging
+    console.log('[APP] Render - sessionId:', sessionId, 'role:', role, 'isActive:', isActive, 'inSession:', inSession);
+
     return (
         <ErrorBoundary>
             <AnimatePresence mode="wait">

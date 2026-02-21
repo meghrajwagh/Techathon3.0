@@ -7,6 +7,7 @@ import useStudentStore from "@/store/studentStore";
 import useSocketStore from "@/store/socketStore";
 import { useCodeExecution } from "@/hooks/useCodeExecution";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useStudentSocket } from "@/hooks/useStudentSocket";
 
 import Header from "@/components/layout/Header";
 import SharedWindow from "@/components/student/SharedWindow";
@@ -16,11 +17,16 @@ import CodeEditor from "@/components/editor/CodeEditor";
 import OutputPanel from "@/components/terminal/OutputPanel";
 
 const StudentDashboard = ({ onBackToRoleSelect }) => {
+  // Initialize student socket listeners
+  const { sendCodeChange } = useStudentSocket();
+
   const {
     code,
     language,
     sharedCode,
     sharedLabel,
+    sharedOutput,
+    sharedError,
     isSharedMinimized,
     setCode,
     setLanguage,
@@ -30,6 +36,14 @@ const StudentDashboard = ({ onBackToRoleSelect }) => {
 
   const { isConnected } = useSocketStore();
   const { runCode, output, error, isRunning, clearOutput } = useCodeExecution();
+
+  // Send initial code to backend when component mounts
+  useEffect(() => {
+    if (isConnected && code) {
+      console.log('[STUDENT] Sending initial code to backend');
+      sendCodeChange(code);
+    }
+  }, [isConnected]); // Only run once when connected
 
   const handleRunCode = useCallback(() => {
     if (!isControlledByTeacher) {
@@ -45,9 +59,11 @@ const StudentDashboard = ({ onBackToRoleSelect }) => {
     (val) => {
       if (!isControlledByTeacher) {
         setCode(val);
+        // Send code change to backend
+        sendCodeChange(val);
       }
     },
-    [isControlledByTeacher, setCode],
+    [isControlledByTeacher, setCode, sendCodeChange],
   );
 
   const [fontSize, setFontSize] = useState(14);
@@ -104,24 +120,31 @@ const StudentDashboard = ({ onBackToRoleSelect }) => {
       />
 
       <div ref={containerRef} className="flex-1 flex min-h-0 overflow-hidden">
-        <div style={{ width: `${splitRatio}%` }} className="flex flex-col">
+        <div
+          style={{ width: isSharedMinimized ? '40px' : `${splitRatio}%` }}
+          className="flex flex-col transition-all duration-300"
+        >
           <SharedWindow
             code={sharedCode}
             label={sharedLabel}
             language={language}
             isMinimized={isSharedMinimized}
             onToggleMinimize={toggleSharedMinimized}
+            output={sharedOutput}
+            error={sharedError}
           />
         </div>
 
-        <div
-          onMouseDown={handleMouseDown}
-          className="w-1 cursor-col-resize bg-white/[0.05] hover:bg-accent-blue transition-colors"
-        />
+        {!isSharedMinimized && (
+          <div
+            onMouseDown={handleMouseDown}
+            className="w-1 cursor-col-resize bg-white/[0.05] hover:bg-accent-blue transition-colors"
+          />
+        )}
 
         <div
-          style={{ width: `${100 - splitRatio}%` }}
-          className="flex flex-col min-h-0 min-w-0"
+          style={{ width: isSharedMinimized ? 'calc(100% - 40px)' : `${100 - splitRatio}%` }}
+          className="flex flex-col min-h-0 min-w-0 transition-all duration-300"
         >
           {isControlledByTeacher && (
             <div className="bg-yellow-500/15 text-yellow-400 text-sm px-5 py-3 border-b border-yellow-500/30 font-semibold">
