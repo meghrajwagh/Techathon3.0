@@ -180,46 +180,42 @@ const TeacherDashboard = ({ onBackToRoleSelect }) => {
         >
           {selectedStudent ? (
             <>
-              <div className="px-3 py-2 border-b border-white/[0.04] flex items-center justify-between text-xs text-text-secondary">
-                <span>Viewing: {selectedStudent.name}</span>
 
-                <div className="flex items-center gap-2">
-                  {/* 🔥 Share Button */}
-                  <button
-                    onClick={() =>
-                      promoteStudent(selectedStudent.id)
-                    }
-                    className={`px-2 py-1 rounded transition ${
-                      promotedStudentId === selectedStudent.id
-                        ? "bg-accent-blue text-white"
-                        : "bg-accent-blue/20 text-accent-blue hover:bg-accent-blue/30"
-                    }`}
-                  >
-                    {promotedStudentId === selectedStudent.id
-                      ? "Shared"
-                      : "Share"}
-                  </button>
+<div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between bg-background-primary shadow-sm">
+  <span className="text-base font-semibold text-white">
+    Viewing: {selectedStudent.name}
+  </span>
 
-                  {/* 🔥 Edit / Control Button */}
-                  {isControlling ? (
-                    <button
-                      onClick={releaseControl}
-                      className="px-2 py-1 rounded bg-status-error/20 text-status-error hover:bg-status-error/30 transition"
-                    >
-                      Give Back Control
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() =>
-                        takeControl(selectedStudent.id)
-                      }
-                      className="px-2 py-1 rounded bg-accent-blue/20 text-accent-blue hover:bg-accent-blue/30 transition"
-                    >
-                      Edit
-                    </button>
-                  )}
-                </div>
-              </div>
+  <div className="flex items-center gap-3">
+
+    <button
+      onClick={() => promoteStudent(selectedStudent.id)}
+      className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm ${
+        promotedStudentId === selectedStudent.id
+          ? "bg-accent-blue text-white shadow-md"
+          : "bg-accent-blue/20 text-accent-blue hover:bg-accent-blue/30"
+      }`}
+    >
+      {promotedStudentId === selectedStudent.id ? "Shared" : "Share"}
+    </button>
+
+    {isControlling ? (
+      <button
+        onClick={releaseControl}
+        className="px-4 py-2 rounded-xl text-sm font-semibold bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all"
+      >
+        Give Back Control
+      </button>
+    ) : (
+      <button
+        onClick={() => takeControl(selectedStudent.id)}
+        className="px-4 py-2 rounded-xl text-sm font-semibold bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-all"
+      >
+        Edit
+      </button>
+    )}
+  </div>
+</div>
 
               <div className="flex-1 min-h-0">
                 <CodeEditor

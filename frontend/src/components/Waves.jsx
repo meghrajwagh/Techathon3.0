@@ -196,7 +196,7 @@ const Waves = ({ lineColor = '#FFFFFF', children }) => {
             ctx.clearRect(0, 0, bounding.width, bounding.height);
             ctx.beginPath();
             ctx.strokeStyle = state.lineColor;
-            ctx.lineWidth = 0.5;
+            ctx.lineWidth = 0.5; // Made it thin for better aesthetics
 
             lines.forEach((points) => {
                 let p1 = moved(points[0], false);
