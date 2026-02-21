@@ -1,56 +1,52 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import subprocess
-import tempfile
-import os
+import docker
+import uuid
+import asyncio
 
-app = FastAPI()
+docker_client = docker.from_env()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+async def run_code(code: str, timeout: int = 10):
+    container = None
+    container_name = f"code-exec-{uuid.uuid4().hex[:8]}"
 
-class CodeRequest(BaseModel):
-    code: str
-    timeout: int = 5
-
-@app.post("/execute")
-async def execute_code(request: CodeRequest):
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".py") as tmp:
-            tmp.write(request.code.encode("utf-8"))
-            tmp_path = tmp.name
-
-        result = subprocess.run(
-            ["python", tmp_path],
-            capture_output=True,
-            text=True,
-            timeout=request.timeout
+        container = docker_client.containers.create(
+            image="python:3.11-slim",
+            command=["python", "-u", "-c", code],
+            name=container_name,
+            mem_limit="256m",
+            cpu_quota=50000,  # ~50% CPU
+            network_mode="none",
+            stdin_open=False,
+            tty=False,
+            detach=True
         )
 
-        os.remove(tmp_path)
+        container.start()
+
+        try:
+            container.wait(timeout=timeout)
+        except Exception:
+            container.kill()
+            return {
+                "error": "Execution timed out"
+            }
+
+        logs = container.logs(stdout=True, stderr=True).decode("utf-8")
+        exit_code = container.attrs["State"]["ExitCode"]
 
         return {
-            "exit_code": result.returncode,
-            "stdout": result.stdout,
-            "stderr": result.stderr
+            "exit_code": exit_code,
+            "output": logs
         }
 
-    except subprocess.TimeoutExpired:
-        return {"error": "Execution timed out"}
-
     except Exception as e:
-        return {"error": str(e)}
+        return {
+            "error": str(e)
+        }
 
-@app.get("/")
-async def root():
-    return {"message": "Demo Code Execution API Running "}
-
-@app.get("/health")
-async def health():
-    return {"status": "ok"}
+    finally:
+        if container:
+            try:
+                container.remove(force=True)
+            except Exception:
+                pass
