@@ -140,3 +140,6 @@ vite.config.ts.timestamp-*
 
 # Kiro directory
 .kiro
+
+# Test frontend
+test-frontend

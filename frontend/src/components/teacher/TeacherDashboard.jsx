@@ -8,6 +8,7 @@ import useTeacherStore from "@/store/teacherStore";
 import useSocketStore from "@/store/socketStore";
 import { useCodeExecution } from "@/hooks/useCodeExecution";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useTeacherSocket } from "@/hooks/useTeacherSocket";
 
 import Header from "@/components/layout/Header";
 import EditorHeader from "@/components/editor/EditorHeader";
@@ -19,6 +20,9 @@ import StudentPanel from "@/components/teacher/StudentPanel";
 import { motion, AnimatePresence } from "framer-motion";
 
 const TeacherDashboard = ({ onBackToRoleSelect }) => {
+  // Initialize teacher socket listeners
+  useTeacherSocket();
+
   const {
     code,
     language,
@@ -181,41 +185,40 @@ const TeacherDashboard = ({ onBackToRoleSelect }) => {
           {selectedStudent ? (
             <>
 
-<div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between bg-background-primary shadow-sm">
-  <span className="text-base font-semibold text-white">
-    Viewing: {selectedStudent.name}
-  </span>
+              <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between bg-background-primary shadow-sm">
+                <span className="text-base font-semibold text-white">
+                  Viewing: {selectedStudent.name}
+                </span>
 
-  <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3">
 
-    <button
-      onClick={() => promoteStudent(selectedStudent.id)}
-      className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm ${
-        promotedStudentId === selectedStudent.id
-          ? "bg-accent-blue text-white shadow-md"
-          : "bg-accent-blue/20 text-accent-blue hover:bg-accent-blue/30"
-      }`}
-    >
-      {promotedStudentId === selectedStudent.id ? "Shared" : "Share"}
-    </button>
+                  <button
+                    onClick={() => promoteStudent(selectedStudent.id)}
+                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm ${promotedStudentId === selectedStudent.id
+                        ? "bg-accent-blue text-white shadow-md"
+                        : "bg-accent-blue/20 text-accent-blue hover:bg-accent-blue/30"
+                      }`}
+                  >
+                    {promotedStudentId === selectedStudent.id ? "Shared" : "Share"}
+                  </button>
 
-    {isControlling ? (
-      <button
-        onClick={releaseControl}
-        className="px-4 py-2 rounded-xl text-sm font-semibold bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all"
-      >
-        Give Back Control
-      </button>
-    ) : (
-      <button
-        onClick={() => takeControl(selectedStudent.id)}
-        className="px-4 py-2 rounded-xl text-sm font-semibold bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-all"
-      >
-        Edit
-      </button>
-    )}
-  </div>
-</div>
+                  {isControlling ? (
+                    <button
+                      onClick={releaseControl}
+                      className="px-4 py-2 rounded-xl text-sm font-semibold bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all"
+                    >
+                      Give Back Control
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => takeControl(selectedStudent.id)}
+                      className="px-4 py-2 rounded-xl text-sm font-semibold bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-all"
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
+              </div>
 
               <div className="flex-1 min-h-0">
                 <CodeEditor
@@ -223,7 +226,7 @@ const TeacherDashboard = ({ onBackToRoleSelect }) => {
                   onChange={
                     isControlling
                       ? (val) =>
-                          updateStudentCode(selectedStudent.id, val)
+                        updateStudentCode(selectedStudent.id, val)
                       : undefined
                   }
                   language={language}
@@ -238,7 +241,7 @@ const TeacherDashboard = ({ onBackToRoleSelect }) => {
                   output={selectedStudent.output}
                   error={selectedStudent.error}
                   isRunning={false}
-                  onClear={() => {}}
+                  onClear={() => { }}
                   className="h-full rounded-none"
                 />
               </div>
@@ -255,9 +258,9 @@ const TeacherDashboard = ({ onBackToRoleSelect }) => {
         isOpen={isPanelOpen}
         onClose={closePanel}
         students={students}
-        onViewCode={() => {}}
+        onViewCode={() => { }}
         onEditCode={selectStudent}
-        onPromoteStudent={promoteStudent}   
+        onPromoteStudent={promoteStudent}
         promotedStudentId={promotedStudentId}
       />
     </div>

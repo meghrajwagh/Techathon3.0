@@ -10,13 +10,13 @@ const useSocketStore = create(
         (set) => ({
             // ---- State ----
             /** Whether connected to the WebSocket server */
-            isConnected: true, // Default true for mock mode
+            isConnected: false,
             /** Number of reconnection attempts */
             reconnectAttempts: 0,
             /** Last connection event message */
-            lastEvent: 'Connected',
+            lastEvent: 'Disconnected',
             /** Whether we are in mock mode (no real server) */
-            isMockMode: true,
+            isMockMode: false,
 
             // ---- Actions ----
 

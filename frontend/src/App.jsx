@@ -10,6 +10,7 @@ import ErrorBoundary from '@/components/common/ErrorBoundary';
 import TeacherDashboard from '@/components/teacher/TeacherDashboard';
 import StudentDashboard from '@/components/student/StudentDashboard';
 import useSessionStore from '@/store/sessionStore';
+import { useSocketConnection } from '@/hooks/useSocketConnection';
 
 import Waves from '@/components/Waves';
 import earthImg from '@/assets/earth.jpg';
@@ -175,6 +176,9 @@ const SessionScreen = () => {
 
 const App = () => {
     const { sessionId, role, isActive, endSession } = useSessionStore();
+
+    // Initialize socket connection
+    useSocketConnection();
 
     const inSession = sessionId && role && isActive;
 

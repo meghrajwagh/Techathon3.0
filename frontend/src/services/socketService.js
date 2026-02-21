@@ -1,21 +1,53 @@
 /**
- * Socket Service (Mock)
- * Simulates WebSocket functionality for development.
- * In production, replace with actual Socket.io connection.
- *
- * Provides event emission and listener patterns matching Socket.io API
+ * Socket Service
+ * Real Socket.io connection to the backend server
  */
+import { io } from 'socket.io-client';
 
-class MockSocketService {
+// Backend URL - change this if your backend runs on a different port
+const BACKEND_URL = 'http://localhost:8000';
+
+class SocketService {
     constructor() {
-        /** Event listeners map */
-        this._listeners = new Map();
+        /** Socket.io instance */
+        this.socket = null;
         /** Connection state */
-        this.connected = true;
-        /** Mock latency in ms */
-        this.latency = 100;
+        this.connected = false;
 
-        console.log('[WS] Mock socket service initialized');
+        console.log('[WS] Socket service initialized');
+    }
+
+    /**
+     * Connect to the backend server
+     */
+    connect() {
+        if (this.socket?.connected) {
+            console.log('[WS] Already connected');
+            return this.socket;
+        }
+
+        this.socket = io(BACKEND_URL, {
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionAttempts: 5,
+        });
+
+        this.socket.on('connect', () => {
+            this.connected = true;
+            console.log('[WS] Connected to server', this.socket.id);
+        });
+
+        this.socket.on('disconnect', (reason) => {
+            this.connected = false;
+            console.log('[WS] Disconnected:', reason);
+        });
+
+        this.socket.on('connect_error', (error) => {
+            console.error('[WS] Connection error:', error);
+        });
+
+        return this.socket;
     }
 
     /**
@@ -24,10 +56,11 @@ class MockSocketService {
      * @param {Function} callback - Handler function
      */
     on(event, callback) {
-        if (!this._listeners.has(event)) {
-            this._listeners.set(event, []);
+        if (!this.socket) {
+            console.warn('[WS] Socket not initialized. Call connect() first.');
+            return this;
         }
-        this._listeners.get(event).push(callback);
+        this.socket.on(event, callback);
         return this;
     }
 
@@ -37,53 +70,54 @@ class MockSocketService {
      * @param {Function} callback - Handler to remove
      */
     off(event, callback) {
-        if (!this._listeners.has(event)) return this;
-        const listeners = this._listeners.get(event).filter((fn) => fn !== callback);
-        this._listeners.set(event, listeners);
+        if (!this.socket) return this;
+        this.socket.off(event, callback);
         return this;
     }
 
     /**
-     * Emit an event (simulates sending to server)
+     * Emit an event to the server
      * @param {string} event - Event name
      * @param {*} data - Event payload
      */
     emit(event, data) {
+        if (!this.socket) {
+            console.warn('[WS] Socket not initialized. Call connect() first.');
+            return this;
+        }
         console.log(`[WS] Emitting: ${event}`, data);
-
-        // Simulate server echo with latency
-        setTimeout(() => {
-            this._trigger(event, data);
-        }, this.latency);
-
+        this.socket.emit(event, data);
         return this;
     }
 
     /**
-     * Trigger all listeners for an event
-     * @param {string} event - Event name
-     * @param {*} data - Event payload
+     * Disconnect from the server
      */
-    _trigger(event, data) {
-        const listeners = this._listeners.get(event) || [];
-        listeners.forEach((fn) => fn(data));
-    }
-
-    /** Simulate disconnect */
     disconnect() {
-        this.connected = false;
-        this._trigger('disconnect', { reason: 'client disconnect' });
-        console.log('[WS] Disconnected');
+        if (this.socket) {
+            this.socket.disconnect();
+            this.connected = false;
+            console.log('[WS] Disconnected');
+        }
+        return this;
     }
 
-    /** Simulate reconnect */
-    reconnect() {
-        this.connected = true;
-        this._trigger('connect', {});
-        console.log('[WS] Reconnected');
+    /**
+     * Check if connected
+     */
+    isConnected() {
+        return this.socket?.connected || false;
+    }
+
+    /**
+     * Get socket ID
+     */
+    getSocketId() {
+        return this.socket?.id || null;
     }
 }
 
 // Singleton instance
-const socketService = new MockSocketService();
+const socketService = new SocketService();
 export default socketService;
+

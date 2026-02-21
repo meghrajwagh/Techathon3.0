@@ -5,6 +5,7 @@
  */
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import socketService from '@/services/socketService';
 
 /** Generate a short unique session ID (6 chars, like Google Meet) */
 const generateSessionId = () => {
@@ -59,6 +60,9 @@ const useSessionStore = create(
                 // Start the countdown timer
                 get()._startTimer();
 
+                // Emit join_room event to backend
+                socketService.emit('join_room', { roomId: sessionId });
+
                 console.log('[SESSION] Created session:', sessionId);
                 return sessionId;
             },
@@ -75,6 +79,9 @@ const useSessionStore = create(
 
                 // Start the countdown timer
                 get()._startTimer();
+
+                // Emit join_room event to backend
+                socketService.emit('join_room', { roomId: sessionId });
 
                 console.log('[SESSION] Joined session:', sessionId);
             },
@@ -93,6 +100,9 @@ const useSessionStore = create(
                     hostName: '',
                     userName: '',
                 }, false, 'endSession');
+
+                // Disconnect socket when ending session
+                socketService.disconnect();
 
                 console.log('[SESSION] Session ended');
             },
