@@ -1,0 +1,77 @@
+/* ==========================================
+ * Editor Theme - Antigravity Dark
+ * Custom Monaco editor theme overrides
+ * ========================================== */
+
+/* Monaco editor container overrides */
+.monaco-editor,
+.monaco-editor .overflow-guard {
+    border-radius: 8px !important;
+}
+
+/* Editor background */
+.monaco-editor .monaco-editor-background,
+.monaco-editor .margin {
+    background-color: #0f1419 !important;
+}
+
+/* Active line highlight */
+.monaco-editor .view-overlays .current-line {
+    background-color: rgba(59, 130, 246, 0.06) !important;
+    border: none !important;
+}
+
+/* Selection highlight */
+.monaco-editor .selected-text {
+    background-color: rgba(59, 130, 246, 0.2) !important;
+}
+
+/* Cursor */
+.monaco-editor .cursor {
+    background-color: #3b82f6 !important;
+    border-color: #3b82f6 !important;
+}
+
+/* Line numbers */
+.monaco-editor .line-numbers {
+    color: #4b5563 !important;
+}
+
+.monaco-editor .line-numbers.active-line-number {
+    color: #9ca3af !important;
+}
+
+/* Minimap */
+.monaco-editor .minimap {
+    opacity: 0.6;
+}
+
+.monaco-editor .minimap:hover {
+    opacity: 1;
+}
+
+/* Scrollbar */
+.monaco-editor .scrollbar .slider {
+    background: rgba(55, 65, 81, 0.5) !important;
+    border-radius: 3px !important;
+}
+
+.monaco-editor .scrollbar .slider:hover {
+    background: rgba(75, 85, 99, 0.7) !important;
+}
+
+/* Widget (autocomplete, hover) overrides */
+.monaco-editor .suggest-widget,
+.monaco-editor .editor-widget {
+    background-color: #1a1f2e !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Parameter hints */
+.monaco-editor .parameter-hints-widget {
+    background-color: #1a1f2e !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 8px !important;
+}
