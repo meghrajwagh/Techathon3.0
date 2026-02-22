@@ -42,7 +42,7 @@ async def handle_join_room(sid, sio, rooms, data):
         await sio.enter_room(sid, room_id)
         
         # Emit role_assigned event to socket with teacher role
-        await sio.emit('role_assigned', {'role': 'teacher'}, room=sid)
+        await sio.emit('role_assigned', {'role': 'teacher'}, to=sid)
         
         print(f'[JOIN_ROOM] Room {room_id} created. Teacher: {sid} (name: "{user_name}")')
     
@@ -60,7 +60,7 @@ async def handle_join_room(sid, sio, rooms, data):
         await sio.enter_room(sid, room_id)
         
         # Emit role_assigned event to socket with student role
-        await sio.emit('role_assigned', {'role': 'student'}, room=sid)
+        await sio.emit('role_assigned', {'role': 'student'}, to=sid)
         
         # Note: Teacher's current code will be sent by the teacher's frontend
         # when it detects a new student joined (via student count change).
@@ -68,9 +68,12 @@ async def handle_join_room(sid, sio, rooms, data):
         
         # Emit student_list_update to teacher socket with all students
         teacher_socket_id = rooms[room_id]['teacher']
-        await sio.emit('student_list_update', 
-                      {'students': rooms[room_id]['students']}, 
-                      room=teacher_socket_id)
+        student_list_data = {'students': rooms[room_id]['students']}
+        
+        print(f'[JOIN_ROOM] Emitting student_list_update to teacher {teacher_socket_id}')
+        print(f'[JOIN_ROOM] Student list data: {student_list_data}')
+        
+        await sio.emit('student_list_update', student_list_data, to=teacher_socket_id)
         
         print(f'[JOIN_ROOM] Student {sid} (name: "{student_name}") joined room {room_id}. Total students: {len(rooms[room_id]["students"])}')
         print(f'[JOIN_ROOM] Current students in room: {rooms[room_id]["students"]}')

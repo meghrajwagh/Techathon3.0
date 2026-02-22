@@ -241,7 +241,7 @@ if handlers_available:
                 for student_sid in room_data.get('students', {}).keys():
                     await sio.emit('teacher_code_change', {
                         'code': data.get('code', '')
-                    }, room=student_sid)
+                    }, to=student_sid)
                 print(f'[TEACHER_CODE_CHANGE] Broadcasted code to {len(room_data.get("students", {}))} students in room {room_id}')
                 break
     
@@ -256,7 +256,7 @@ if handlers_available:
                     await sio.emit('teacher_output', {
                         'output': data.get('output', ''),
                         'error': data.get('error', None)
-                    }, room=student_sid)
+                    }, to=student_sid)
                 print(f'[TEACHER_OUTPUT] Broadcasted output to {len(room_data.get("students", {}))} students in room {room_id}')
                 break
     

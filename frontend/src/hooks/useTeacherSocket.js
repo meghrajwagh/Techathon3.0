@@ -18,9 +18,16 @@ export const useTeacherSocket = () => {
         const socket = socketService.socket;
         if (!socket) return;
 
+        console.log('[TEACHER_SOCKET] Setting up teacher socket listeners');
+        console.log('[TEACHER_SOCKET] Socket ID:', socket.id);
+        console.log('[TEACHER_SOCKET] Socket connected:', socket.connected);
+
         // Handle student list updates from backend
         const handleStudentListUpdate = (data) => {
-            console.log('[TEACHER] Student list update:', data);
+            console.log('[TEACHER] ===== STUDENT LIST UPDATE RECEIVED =====');
+            console.log('[TEACHER] Raw data:', data);
+            console.log('[TEACHER] Students object:', data.students);
+            console.log('[TEACHER] Students entries:', Object.entries(data.students || {}));
 
             // Convert backend student format to frontend format
             const students = Object.entries(data.students || {}).map(([id, student]) => ({
@@ -35,6 +42,8 @@ export const useTeacherSocket = () => {
                 language: 'python', // Default to python since backend executes Python
             }));
 
+            console.log('[TEACHER] Converted students array:', students);
+            console.log('[TEACHER] Number of students:', students.length);
             setStudents(students);
         };
 
@@ -56,13 +65,16 @@ export const useTeacherSocket = () => {
         };
 
         // Register event listeners
+        console.log('[TEACHER_SOCKET] Registering event listeners...');
         socket.on('student_list_update', handleStudentListUpdate);
         socket.on('code_update', handleCodeUpdate);
         socket.on('student_output', handleStudentOutput);
         socket.on('role_assigned', handleRoleAssigned);
+        console.log('[TEACHER_SOCKET] Event listeners registered successfully');
 
         // Cleanup
         return () => {
+            console.log('[TEACHER_SOCKET] Cleaning up event listeners');
             socket.off('student_list_update', handleStudentListUpdate);
             socket.off('code_update', handleCodeUpdate);
             socket.off('student_output', handleStudentOutput);

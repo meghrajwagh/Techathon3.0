@@ -78,7 +78,7 @@ async def handle_disconnect(sid, sio, rooms):
         teacher_socket_id = room['teacher']
         await sio.emit('student_list_update', 
                       {'students': room['students']}, 
-                      room=teacher_socket_id)
+                      to=teacher_socket_id)
         
         # Broadcast main_view_update if mainView was reset
         if main_view_reset:

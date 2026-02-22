@@ -5,7 +5,7 @@
 import { io } from 'socket.io-client';
 
 // Backend URL - change this if your backend runs on a different port
-const BACKEND_URL = 'http://localhost:3000';
+const BACKEND_URL = 'http://192.168.137.1:8000';
 
 class SocketService {
     constructor() {

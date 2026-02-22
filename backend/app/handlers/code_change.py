@@ -46,6 +46,6 @@ async def handle_code_change(sid, sio, rooms, data):
     # Emit code_update event to teacher socket only with studentId and code
     await sio.emit('code_update', 
                   {'studentId': sid, 'code': code}, 
-                  room=teacher_socket_id)
+                  to=teacher_socket_id)
     
     print(f'[CODE_CHANGE] Student {sid} updated code in room {room_id}')
