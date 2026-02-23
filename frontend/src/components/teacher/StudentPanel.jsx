@@ -152,16 +152,16 @@ const StudentPanel = ({
                       <div className="flex items-center gap-2">
                         {/* Status dot: green = has output, red = has error, gray = nothing yet */}
                         <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${student.error
-                            ? 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]'
-                            : student.output
-                              ? 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.5)]'
-                              : 'bg-white/20'
+                          ? 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]'
+                          : student.output
+                            ? 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.5)]'
+                            : 'bg-white/20'
                           }`} />
                         <span className={`text-sm font-medium ${student.error
-                            ? 'text-red-400'
-                            : student.output
-                              ? 'text-green-400'
-                              : 'text-text-primary'
+                          ? 'text-red-400'
+                          : student.output
+                            ? 'text-green-400'
+                            : 'text-text-primary'
                           }`}>
                           {student.name}
                         </span>
@@ -218,7 +218,7 @@ const StudentPanel = ({
                             </button>
 
                             <button
-                              onClick={() => onPromoteStudent?.(student)}
+                              onClick={() => onPromoteStudent?.(student.id)}
                               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition ${student.id === promotedStudentId
                                 ? "bg-accent-blue text-white"
                                 : "bg-accent-blue/20 text-accent-blue hover:bg-accent-blue/30"
@@ -312,7 +312,7 @@ const StudentPanel = ({
 
                   <button
                     onClick={() =>
-                      onPromoteStudent?.(previewStudent)
+                      onPromoteStudent?.(previewStudent.id)
                     }
                     className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm ${previewStudent.id === promotedStudentId
                       ? "bg-accent-blue text-white"

@@ -48,16 +48,17 @@ export const useStudentSocket = () => {
             setControlled(false);
         };
 
-        // Listen for shared code from teacher
+        // Listen for shared code (promoted student code broadcast by teacher)
         const handleSharedCode = (data) => {
-            console.log('[STUDENT] Received shared code from teacher');
-            setSharedCode(data.code, data.label || "Teacher's View");
+            console.log('[STUDENT] Received shared code:', data.label);
+            setSharedCode(data.code, data.label || "Shared Code");
         };
 
-        // Listen for teacher code changes
+        // Listen for teacher code changes — update teacher code tracking
         const handleTeacherCodeChange = (data) => {
             console.log('[STUDENT] Received teacher code change');
-            setSharedCode(data.code, "Teacher's View");
+            const { setTeacherCode } = useStudentStore.getState();
+            setTeacherCode(data.code);
         };
 
         // Listen for teacher output changes
@@ -73,6 +74,13 @@ export const useStudentSocket = () => {
             setCode(data.code);
         };
 
+        // Listen for unshare — revert back to teacher's code
+        const handleUnshareCode = () => {
+            console.log('[STUDENT] Unshare received — reverting to teacher code');
+            const { revertToTeacherCode } = useStudentStore.getState();
+            revertToTeacherCode();
+        };
+
         // Register event listeners
         socket.on('teacher_take_control', handleTeacherTakeControl);
         socket.on('teacher_release_control', handleTeacherReleaseControl);
@@ -80,6 +88,7 @@ export const useStudentSocket = () => {
         socket.on('teacher_code_change', handleTeacherCodeChange);
         socket.on('teacher_output', handleTeacherOutput);
         socket.on('teacher_edit_code', handleTeacherEditCode);
+        socket.on('unshare_code', handleUnshareCode);
 
         // Cleanup
         return () => {
@@ -89,6 +98,7 @@ export const useStudentSocket = () => {
             socket.off('teacher_code_change', handleTeacherCodeChange);
             socket.off('teacher_output', handleTeacherOutput);
             socket.off('teacher_edit_code', handleTeacherEditCode);
+            socket.off('unshare_code', handleUnshareCode);
         };
     }, [role, sessionId, userName, setCode, setSharedCode, setControlled]);
 

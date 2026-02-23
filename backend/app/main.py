@@ -350,6 +350,29 @@ if handlers_available:
                     }, to=student_sid)
                 break
 
+    @sio.event
+    async def share_student_code(sid, data):
+        """Teacher shares a student's code with all students in the room."""
+        for room_id, room_data in rooms.items():
+            if room_data.get('teacher') == sid:
+                for student_sid in room_data.get('students', {}).keys():
+                    await sio.emit('shared_code', {
+                        'code': data.get('code', ''),
+                        'label': data.get('label', 'Shared Code')
+                    }, to=student_sid)
+                print(f'[SHARE] Teacher shared student code to {len(room_data.get("students", {}))} students in room {room_id}')
+                break
+
+    @sio.event
+    async def unshare_student_code(sid, data=None):
+        """Teacher stops sharing — tell students to revert to teacher's code."""
+        for room_id, room_data in rooms.items():
+            if room_data.get('teacher') == sid:
+                for student_sid in room_data.get('students', {}).keys():
+                    await sio.emit('unshare_code', {}, to=student_sid)
+                print(f'[UNSHARE] Teacher unshared code in room {room_id}')
+                break
+
 
 # FastAPI routes (optional - for health checks, etc.)
 @app.get("/")

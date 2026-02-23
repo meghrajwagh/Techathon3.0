@@ -149,6 +149,27 @@ const TeacherDashboard = ({ onBackToRoleSelect }) => {
 
   const isControlling = selectedStudent && controlledStudentId === selectedStudent.id;
 
+  // ── Share / Unshare student code ──
+  const handlePromoteStudent = useCallback((studentId) => {
+    const currentlyPromoted = promotedStudentId;
+    // Toggle the local promoted state
+    promoteStudent(studentId);
+
+    if (currentlyPromoted === studentId) {
+      // Was already sharing this student → unshare
+      socketService.emit('unshare_student_code', {});
+    } else {
+      // Share this student's code with the class
+      const student = students.find(s => s.id === studentId);
+      if (student) {
+        socketService.emit('share_student_code', {
+          code: student.code || '',
+          label: `Shared: ${student.name}`
+        });
+      }
+    }
+  }, [promotedStudentId, promoteStudent, students]);
+
   return (
     <div className="flex flex-col h-screen bg-black">
       <Header
@@ -243,7 +264,7 @@ const TeacherDashboard = ({ onBackToRoleSelect }) => {
 
                 <div className="flex items-center gap-1.5">
                   <button
-                    onClick={() => promoteStudent(selectedStudent.id)}
+                    onClick={() => handlePromoteStudent(selectedStudent.id)}
                     className={`px-2.5 py-1 rounded text-[10px] font-semibold transition-all ${promotedStudentId === selectedStudent.id
                       ? "bg-blue-500/20 text-blue-400"
                       : "text-neutral-500 hover:text-neutral-300 hover:bg-white/[0.04]"
@@ -327,7 +348,7 @@ const TeacherDashboard = ({ onBackToRoleSelect }) => {
         students={students}
         onViewCode={() => { }}
         onEditCode={selectStudent}
-        onPromoteStudent={promoteStudent}
+        onPromoteStudent={handlePromoteStudent}
         promotedStudentId={promotedStudentId}
       />
     </div>
